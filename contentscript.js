@@ -6,6 +6,7 @@ try {
     grn = {};
 }
 (function() {
+    // TODO: カラー系などの設定は別で持つ
     console.log("content script is loaded, you can use $");
     // global
     var $LINKS = [];
@@ -25,7 +26,7 @@ try {
         // TODO: 掲示板以外：スケジュールも対象にしたいかも スペースもかも
 
         // 対象となるリンク先を全マージ
-        $links = $.merge(modifiedLinks, unreadLinks); 
+        $links = $.merge(modifiedLinks, unreadLinks);
 
         // 暫定で色をつける
         $links.css("backgroundColor", "#FCC");
@@ -57,8 +58,34 @@ try {
      */
     var moveCursor = function(n) {
         console.log("move cursor");
+        $($LINKS.get(SELECTED_INDEX)).css("background-color", "#FCC");
         // TODO: 循環参照するようにマイナスやプラスでオーバーした時の対応
+        var size = $LINKS.length;
+
+        if (size < SELECTED_INDEX + n && n > 0) {
+            SELECTED_INDEX += n - size;
+        } else if (SELECTED_INDEX < Math.abs(n) && n < 0) {
+            SELECTED_INDEX += size + n;
+        } else {
+            SELECTED_INDEX += n;
+        }
+        if (SELECTED_INDEX === size) {
+            SELECTED_INDEX = 0;
+        }
+        console.log(SELECTED_INDEX);
+        console.log($LINKS, typeof $LINKS);
+        $($LINKS.get(SELECTED_INDEX)).css("background-color", "#CCF");
+        // 選択していることが分かるようにアクティブリンクの色を変える
     }
+
+    /**
+     * u キーを押した時の実装
+     * 描画エリアを閉じる（中身をクリアする）
+     */
+    var inputU = function() {
+        console.log("u pressed");
+        resetViewArea();
+    };
 
     /**
      * o キーを押した時の実装
@@ -89,8 +116,16 @@ try {
      */
     var createViewArea = function() {
         console.log("createViewArea");
-        var area = '<div id="grn_extension_view_area" style="border: 5px solid #FFF">xxxxxxx</div>';
+        var area = '<div id="grn_extension_view_area" style="border: 5px solid #FFF"/>';
         $(".mainarea").prepend(area);
+    };
+
+    /**
+     * 描画されている内容を一旦消去する
+     */
+    var resetViewArea = function() {
+        console.log("resetViewArea");
+        $("#grn_extension_view_area").html("");
     };
 
     /**
@@ -139,6 +174,7 @@ try {
         $(document).on("keydown", null, "j", inputJ);
         $(document).on("keydown", null, "k", inputK);
         $(document).on("keydown", null, "o", inputO);
+        $(document).on("keydown", null, "u", inputU);
         // 会議室読み込みは初回呼び出し時でもいいかも
         $(document).on("keydown", null, "m", inputM);
         // rキーはただのリロード
@@ -146,6 +182,7 @@ try {
             location.reload()
         });
         createViewArea();
+        moveCursor(0);
     };
 
     // start
