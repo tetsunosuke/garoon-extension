@@ -11,6 +11,8 @@ try {
     // global
     var $LINKS = [];
     var SELECTED_INDEX = 0;
+	var UNREAD_COUNT = 0;
+
     // define functions //
     /**
      * カーソル移動の対象としたいリンク一覧を取得
@@ -30,6 +32,7 @@ try {
 
         // 暫定で色をつける
         $links.css("backgroundColor", "#FCC");
+		UNREAD_COUNT = $links.length;
         return $links;
     };
 
@@ -41,6 +44,9 @@ try {
         // TODO: 実装
         console.log("j pressed");
         moveCursor(1);
+		if (isViewAreaOpened()) {
+			loadLink();
+		}
     };
     /**
      * k キーを押した時のショートカット動作
@@ -50,6 +56,9 @@ try {
         // TODO: 実装
         console.log("k pressed");
         moveCursor(-1);
+		if (isViewAreaOpened()) {
+			loadLink();
+		}
     };
 
     /**
@@ -72,10 +81,8 @@ try {
         if (SELECTED_INDEX === size) {
             SELECTED_INDEX = 0;
         }
-        console.log(SELECTED_INDEX);
-        console.log($LINKS, typeof $LINKS);
-        $($LINKS.get(SELECTED_INDEX)).css("background-color", "#CCF");
         // 選択していることが分かるようにアクティブリンクの色を変える
+        $($LINKS.get(SELECTED_INDEX)).css("background-color", "#CCF");
     }
 
     /**
@@ -93,30 +100,56 @@ try {
      */
     var inputO = function() {
         console.log("o pressed");
-        console.log($LINKS);
+		loadLink();
+
+    };
+
+	/**
+	 * 描画エリアが開かれているかどうか
+	 */
+	var isViewAreaOpened = function() {
+		return ($("#grn_extension_view_area").html().length !== 0)
+	};
+
+	/**
+	 * 現在選択中のリンクをロードして表示する
+	 */
+	var loadLink = function() {
         var $a = $($LINKS.get(SELECTED_INDEX));
         console.log($a.attr("href"));
         $.ajax({
             url: $a.attr("href")
         })
         .done(function(data) {
-            //  <dic class="unread_color"> の部分が未読
             var $html = $(data);
             // TODO: 下記のパターンは、ど新規ではなく更新差分があった場合の見方になる
+			// TODO: ド新規の場合は更新差分はほぼなしになってしまうため
             var $unreads = $html.find(".unread_color");
+			// すでに記事を開いている場合は一度中身を空にしてからとする
+			if (isViewAreaOpened()) {
+				resetViewArea();
+			}
             $unreads.each(function() {
                 $("#grn_extension_view_area").append($(this).html() + '<div class="border-partition-follow-grn"></div>');
             });
-        });
+			// TODO: 同じ記事を読みに行った場合はデクリメントしない
+			// TODO: もし0件になったらリロードを促すなどする
+			// TODO: デクリメントではなく最初に取得したlinksからspliceしたほうが良いはず
+			UNREAD_COUNT--;
+			console.log("decrement UNREAD_COUNT:", UNREAD_COUNT);
+			// 該当箇所へスクロール
+			$("html,body").animate({scrollTop:$('#grn_extension_view_area').parent().offset().top});
 
-    };
+        });
+	};
 
     /**
      * 初期ロードでAjaxで読み込んだ内容を描画するフィールドを作成する
      */
     var createViewArea = function() {
         console.log("createViewArea");
-        var area = '<div id="grn_extension_view_area" style="border: 5px solid #FFF"/>';
+        var area = '<div id="grn_extension_view_area" class="unread_color"/>';
+		// TODO: 表示場所はここで良いのかは検討する
         $(".mainarea").prepend(area);
     };
 
@@ -166,7 +199,6 @@ try {
     };
 
 
-    var unreads = [];
 
     // start main logic //
     var main = function() {
