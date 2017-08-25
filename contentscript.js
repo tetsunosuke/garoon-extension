@@ -12,6 +12,8 @@ try {
     var $LINKS = [];
     var SELECTED_INDEX = 0;
 	var UNREAD_COUNT = 0;
+	// うまくスクロールできないので少し引いた値に寄せる
+	var SCROLL_MARGIN = 50;
 
     // define functions //
     /**
@@ -25,10 +27,18 @@ try {
         var unreadLinks = $bulletin.find(".bold").parent();
         // 更新掲示板は画像で決まる
         var modifiedLinks = $bulletin.find("img[src*='bulletin20_u.gif']").parent();
-        // TODO: 掲示板以外：スケジュールも対象にしたいかも スペースもかも
+		// スペース
+		// TODO: 読み込み済にしているつもりがそうならない。。なぜだ。
+		var $space = $("a[href^='/cgi-bin/cbgrn/grn.cgi/space/application/discussion/index']").find("img[src*='spaceDiscussion20_u.png']").parent();
+		// スケジュール(event20_(new|edit|delete).gif)
+		var $schedule = $("a[href^='/cgi-bin/cbgrn/grn.cgi/schedule/view']").find("img[src*='event20_']").parent();
 
         // 対象となるリンク先を全マージ
-        $links = $.merge(modifiedLinks, unreadLinks);
+		// TODO: マージ順が「上から」ではなく、掲示板・スペース・スケジュール のようになってしまう違和感をなおしたい
+        var $links = $.merge(modifiedLinks, unreadLinks);
+		$links = $.merge($links, $space);
+		$links = $.merge($links, $schedule);
+
 
         // 暫定で色をつける
         $links.css("backgroundColor", "#FCC");
@@ -65,8 +75,11 @@ try {
      * カーソルの移動
      * $LINKS の範囲の中で移動する
      */
-    var moveCursor = function(n) {
-        console.log("move cursor");
+    var moveCursor = function(n, mode) {
+        console.log("move cursor", n, mode);
+		if (typeof mode === "undefined") {
+			mode = "move";
+		}
         $($LINKS.get(SELECTED_INDEX)).css("background-color", "#FCC");
         // TODO: 循環参照するようにマイナスやプラスでオーバーした時の対応
         var size = $LINKS.length;
@@ -82,7 +95,12 @@ try {
             SELECTED_INDEX = 0;
         }
         // 選択していることが分かるようにアクティブリンクの色を変える
-        $($LINKS.get(SELECTED_INDEX)).css("background-color", "#CCF");
+		var active = $LINKS.get(SELECTED_INDEX);
+        $(active).css("background-color", "#CCF");
+		// ViewAreaが表示されていなければスクロールをカーソル位置にする
+		if (!isViewAreaOpened() && mode === "move") {
+			$("html,body").animate({scrollTop:$(active).parent().offset().top-SCROLL_MARGIN});
+		}
     }
 
     /**
@@ -121,6 +139,7 @@ try {
             url: $a.attr("href")
         })
         .done(function(data) {
+			// TODO: スペースの場合なぜかHTMLの内容がうまくオブジェクト化できない
             var $html = $(data);
             // TODO: 下記のパターンは、ど新規ではなく更新差分があった場合の見方になる
 			// TODO: ド新規の場合は更新差分はほぼなしになってしまうため
@@ -138,7 +157,7 @@ try {
 			UNREAD_COUNT--;
 			console.log("decrement UNREAD_COUNT:", UNREAD_COUNT);
 			// 該当箇所へスクロール
-			$("html,body").animate({scrollTop:$('#grn_extension_view_area').parent().offset().top});
+			$("html,body").animate({scrollTop:$('#grn_extension_view_area').parent().offset().top-SCROLL_MARGIN});
 
         });
 	};
@@ -214,7 +233,7 @@ try {
             location.reload()
         });
         createViewArea();
-        moveCursor(0);
+        moveCursor(0, "init");
     };
 
     // start
