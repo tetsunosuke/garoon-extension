@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/tetsunosuke/garoon-extension#readme",
   "devDependencies": {
-    "jquery": "^3.2.1",
+    "jquery": "^4.0.0",
     "jquery-hotkeys": "^0.2.2"
   }
 }
